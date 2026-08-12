@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 页面标题：显示在浏览器标签页上 -->
+    <title>ECharts 综合案例</title>
+
+    <!--
+      引入 ECharts 图表库（版本 5.4.3）
+      这是本案例的核心依赖，提供了折线图、柱状图、饼图、K线图、地图等图表能力
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+    <!--
+      引入 axios（版本 1.6.2）
+      一个基于 Promise 的 HTTP 请求库，用于从远程或本地接口获取数据
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.2/dist/axios.min.js"></script>
+
+    <!--
+      引入 Mock.js（版本 1.1.0）
+      用于拦截前端请求并返回模拟数据，方便在没有真实后端接口时演示数据加载
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/mockjs@1.1.0/dist/mock.min.js"></script>
+
+    <style>
+      /* ========== 页面基础样式 ========== */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        /* 设置中文字体，保证标题和标签显示美观 */
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        background-color: #f5f5f5;
+      }
+
+      h2 {
+        text-align: center;
+        margin: 30px 0 10px;
+        color: #333;
+      }
+
+      /*
+        chart-box：每个图表容器的公共样式
+        - width / height 必须给固定值，ECharts 初始化时需要明确的宽高
+        - margin: 20px auto 让图表在页面中水平居中并上下留白
+        - border 和 background-color 让图表区域更清晰
+        - border-radius 给容器一点圆角
+      */
+      .chart-box {
+        width: 600px;
+        height: 400px;
+        margin: 20px auto;
+        border: 1px solid #eee;
+        background-color: #fff;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>ECharts 综合案例演示</h2>
+
+    <!--
+      6 个图表容器，每个 div 都有唯一的 id：chart0 ~ chart5
+      ECharts 会通过 document.getElementById 获取这些 DOM 元素并初始化成画布
+      class="chart-box" 统一控制容器的外观尺寸
+    -->
+    <div id="chart0" class="chart-box"></div>
+    <div id="chart1" class="chart-box"></div>
+    <div id="chart2" class="chart-box"></div>
+    <div id="chart3" class="chart-box"></div>
+    <div id="chart4" class="chart-box"></div>
+    <div id="chart5" class="chart-box"></div>
+
+    <script>
+      // ========== 全局变量与公共函数 ==========
+
+      /*
+        charts 数组用于保存所有初始化后的 ECharts 实例
+        这样在窗口大小发生变化时，可以统一调用每个实例的 resize() 方法
+        避免图表被拉伸或出现空白
+      */
+      const charts = [];
+
+      /**
+       * 根据索引获取对应的图表 DOM 容器
+       * @param {number} index 图表序号（0 ~ 5）
+       * @returns {HTMLElement} id 为 chart{index} 的 div 元素
+       */
+      function getDom(index) {
+        return document.getElementById("chart" + index);
+      }
+
+      /**
+       * 初始化一个 ECharts 实例，并将其加入全局 charts 数组
+       * @param {number} index 图表序号
+       * @returns {Object} ECharts 实例对象
+       */
+      function initChart(index) {
+        const chart = echarts.init(getDom(index));
+        charts.push(chart);
+        return chart;
+      }
+
+      /*
+        监听浏览器窗口的 resize 事件
+        当窗口大小改变时，遍历所有图表实例并调用 resize()
+        这样每个图表都会重新计算宽高，保持清晰、不变形
+      */
+      window.addEventListener("resize", function () {
+        charts.forEach(function (chart) {
+          chart.resize();
+        });
+      });
+
+      // ==================== 图表1：折线图 ====================
+      (function () {
+        // 初始化图表，获取 ECharts 实例
+        const myChart = initChart(0);
+
+        /*
+          setOption 用于设置图表的配置项
+          所有图表的标题、坐标轴、数据、样式等都通过 option 对象描述
+        */
+        myChart.setOption({
+          // 标题组件：显示在图表顶部
+          title: {
+            text: "ECharts 折线图",
+            left: "center", // 标题水平居中
+          },
+
+          // 提示框组件：鼠标悬停在数据点上时显示具体数值
+          tooltip: {
+            trigger: "axis", // 坐标轴触发，鼠标放在整条轴上都会显示提示
+          },
+
+          // 图例组件：用于切换显示/隐藏某个数据系列
+          legend: {
+            data: ["手机销量", "平板销量"],
+            bottom: 0, // 图例放在底部
+          },
+
+          /*
+            网格组件：控制图表绘图区域在容器中的位置
+            containLabel: true 表示包含坐标轴标签，防止标签被截断
+          */
+          grid: {
+            left: "10%",
+            right: "10%",
+            bottom: "15%",
+            containLabel: true,
+          },
+
+          // X 轴：类目轴，显示 1 月 ~ 12 月
+          xAxis: {
+            type: "category",
+            data: Array(12)
+              .fill(0)
+              .map(function (_, i) {
+                return i + 1 + "月";
+              }),
+          },
+
+          // Y 轴：数值轴，用于显示销量
+          yAxis: {
+            type: "value",
+          },
+
+          // 数据系列：每个对象对应一条折线
+          series: [
+            {
+              name: "手机销量", // 与 legend 中的名称保持一致
+              type: "line", // 图表类型为折线图
+              // 生成 12 个 800 ~ 1799 之间的随机整数作为销量数据
+              data: Array(12)
+                .fill(0)
+                .map(function () {
+                  return Math.floor(Math.random() * 1000 + 800);
+                }),
+            },
+            {
+              name: "平板销量",
+              type: "line",
+              smooth: true, // 平滑曲线，使折线更加圆润
+              data: Array(12)
+                .fill(0)
+                .map(function () {
+                  return Math.floor(Math.random() * 1000 + 800);
+                }),
+            },
+          ],
+        });
+      })();
+
+      // ==================== 图表2：柱状图 ====================
+      (function () {
+        const myChart = initChart(1);
+
+        myChart.setOption({
+          title: {
+            text: "ECharts 柱状图",
+            left: "center",
+          },
+          tooltip: {
+            trigger: "axis",
+          },
+          legend: {
+            data: ["手机销量", "平板销量"],
+            bottom: 0,
+          },
+          grid: {
+            left: "10%",
+            right: "10%",
+            bottom: "15%",
+            containLabel: true,
+          },
+          xAxis: {
+            type: "category",
+            data: Array(12)
+              .fill(0)
+              .map(function (_, i) {
+                return i + 1 + "月";
+              }),
+          },
+          yAxis: {
+            type: "value",
+          },
+          // 数据系列：每个对象对应一组柱子
+          series: [
+            {
+              name: "手机销量",
+              type: "bar", // 图表类型为柱状图
+              data: Array(12)
+                .fill(0)
+                .map(function () {
+                  return Math.floor(Math.random() * 1000 + 800);
+                }),
+            },
+            {
+              name: "平板销量",
+              type: "bar",
+              data: Array(12)
+                .fill(0)
+                .map(function () {
+                  return Math.floor(Math.random() * 1000 + 800);
+                }),
+            },
+          ],
+        });
+      })();
+
+      // ==================== 图表3：饼图 ====================
+      (function () {
+        const myChart = initChart(2);
+
+        myChart.setOption({
+          title: {
+            text: "ECharts 饼图",
+            left: "center",
+          },
+          // 提示框：显示数据项的名称和数值
+          tooltip: {
+            trigger: "item",
+            formatter: "{a} <br/>{b} : {c} ({d}%)",
+            /*
+              formatter 中的占位符含义：
+              {a}：系列名（访问来源）
+              {b}：数据项名称（如 搜索引擎）
+              {c}：数据项数值
+              {d}：该数据项占总体的百分比
+            */
+          },
+          // 数据系列
+          series: [
+            {
+              name: "访问来源",
+              type: "pie", // 图表类型为饼图
+              radius: "50%", // 饼图半径为容器宽高的 50%
+              roseType: "radius", // 玫瑰图模式：半径表示数值大小
+              // data 中每个对象代表饼图的一个扇区
+              data: [
+                { value: 235, name: "视频广告" },
+                { value: 274, name: "联盟广告" },
+                { value: 310, name: "邮件营销" },
+                { value: 335, name: "直接访问" },
+                { value: 400, name: "搜索引擎" },
+              ],
+            },
+          ],
+        });
+      })();
+
+      // ==================== 图表4：K线图（蜡烛图） ====================
+      (function () {
+        const myChart = initChart(3);
+
+        myChart.setOption({
+          title: {
+            text: "ECharts K线图（蜡烛图）",
+            left: "center",
+          },
+          tooltip: {
+            trigger: "axis",
+          },
+          xAxis: {
+            type: "category",
+            data: Array(12)
+              .fill(0)
+              .map(function (_, i) {
+                return i + 1 + "月";
+              }),
+          },
+          yAxis: {
+            type: "value",
+            scale: true, // 不按 0 开始，自动适配数据范围
+          },
+          /*
+            K 线图（蜡烛图）数据格式说明：
+            每个数据项是一个包含 4 个数字的数组：[开盘价, 收盘价, 最低价, 最高价]
+            必须满足：最低价 <= 开盘价、收盘价 <= 最高价
+          */
+          series: [
+            {
+              type: "k", // 图表类型为 K 线图（candlestick）
+              data: [
+                [20, 34, 10, 38],
+                [34, 35, 30, 50],
+                [35, 38, 33, 44],
+                [38, 33, 30, 40],
+                [33, 27, 22, 35],
+                [27, 26, 22, 32],
+                [26, 27, 22, 29],
+                [27, 33, 25, 35],
+                [33, 37, 28, 45],
+                [37, 30, 25, 40],
+                [30, 26, 22, 35],
+                [26, 18, 13, 30],
+              ],
+            },
+          ],
+        });
+      })();
+
+      // ==================== 图表5：远程加载数据（饼图） ====================
+      (async function () {
+        /*
+          使用 Mock.js 拦截 /api/pie-datas 这个 GET 请求
+          当 axios 请求该地址时，Mock.js 会返回这里配置的模拟数据
+          这样即使没有真实后端服务器，也能演示“请求 -> 加载 -> 渲染”的完整流程
+        */
+        Mock.mock("/api/pie-datas", "get", {
+          datas: [
+            { value: 235, name: "视频广告" },
+            { value: 274, name: "联盟广告" },
+            { value: 310, name: "邮件营销" },
+            { value: 335, name: "直接访问" },
+            { value: 400, name: "搜索引擎" },
+          ],
+        });
+
+        // 设置 Mock 响应延迟为 2000 毫秒，模拟网络请求的等待过程
+        Mock.setup({
+          timeout: 2000,
+        });
+
+        const myChart = initChart(4);
+
+        // 先显示一个临时标题，提示用户数据正在加载
+        myChart.setOption({
+          title: {
+            text: "ECharts 饼图，远程数据加载中...",
+            left: "center",
+          },
+        });
+
+        // 显示加载动画（转圈效果），提升用户体验
+        myChart.showLoading();
+
+        try {
+          // 使用 axios 发送 GET 请求，获取远程饼图数据
+          const resp = await axios.get("/api/pie-datas");
+
+          /*
+            请求成功后，使用获取到的数据重新设置图表选项
+            resp.data 是 Mock.js 返回的对象
+            resp.data.datas 才是饼图真正需要的数据数组
+          */
+          myChart.setOption({
+            title: {
+              text: "ECharts 饼图（远程数据）",
+              left: "center",
+            },
+            tooltip: {
+              trigger: "item",
+              formatter: "{a} <br/>{b} : {c} ({d}%)",
+            },
+            series: [
+              {
+                name: "访问来源",
+                type: "pie",
+                radius: "50%",
+                roseType: "radius",
+                data: resp.data.datas,
+              },
+            ],
+          });
+        } catch (error) {
+          // 如果请求失败（如网络异常），在控制台打印错误，并显示友好的错误提示
+          console.error("远程数据加载失败：", error);
+          myChart.setOption({
+            title: {
+              text: "数据加载失败，请检查网络或接口",
+              left: "center",
+              textStyle: {
+                color: "#c23531",
+              },
+            },
+          });
+        } finally {
+          // 无论请求成功还是失败，最后都要隐藏加载动画
+          myChart.hideLoading();
+        }
+      })();
+
+      // ==================== 图表6：地图数据 ====================
+      (async function () {
+        const myChart = initChart(5);
+
+        // 显示加载动画，等待 GeoJSON 和用户数据都加载完成
+        myChart.showLoading();
+
+        try {
+          /*
+            并行发起两个 axios 请求：
+            1. china.geojson.json：中国地图的 GeoJSON 数据，用于绘制地图轮廓
+            2. user.json：各省份对应的用户数数据
+            Promise.all 等待两个请求都完成后才继续执行
+          */
+          const [resp, users] = await Promise.all([
+            axios.get("./china.geojson.json"),
+            axios.get("./user.json"),
+          ]);
+
+          /*
+            使用 echarts.registerMap 注册地图
+            第一个参数 "China" 是地图名称，后续 series.map 中通过该名称引用
+            第二个参数 resp.data 是 GeoJSON 格式的地图数据
+          */
+          echarts.registerMap("China", resp.data);
+
+          // 设置地图图表的配置项
+          myChart.setOption({
+            title: {
+              text: "ECharts 用户地图",
+              left: "center",
+            },
+            // 提示框：鼠标悬停在某个省份时显示该省用户数
+            tooltip: {
+              formatter: "{b} 注册用户 {c}人",
+              /*
+                {b}：数据项名称（省份名）
+                {c}：数据项数值（用户数）
+              */
+            },
+            /*
+              visualMap：视觉映射组件
+              根据数值大小自动给不同省份填充不同颜色
+              min / max 定义数值范围
+              text 中 ["高", "低"] 对应颜色条两端文字
+              calculable: true 允许用户拖动调整范围
+            */
+            visualMap: {
+              left: "right",
+              min: 0,
+              max: 10000,
+              text: ["高", "低"],
+              calculable: true,
+              inRange: {
+                color: ["#e0f3f8", "#abd9e9", "#74add1", "#4575b4"],
+              },
+            },
+            series: [
+              {
+                type: "map", // 图表类型为地图
+                map: "China", // 引用上面注册的地图名称
+                roam: true, // 允许鼠标缩放和拖拽地图
+                // 缩放限制：最小 0.7 倍，最大 3 倍
+                scaleLimit: {
+                  min: 0.7,
+                  max: 3,
+                },
+                label: {
+                  show: true, // 在地图上显示省份名称
+                  fontSize: 10,
+                },
+                // 地图数据：每个对象包含省份名 name 和用户数 value
+                data: users.data,
+              },
+            ],
+          });
+        } catch (error) {
+          // 如果 GeoJSON 或用户数据加载失败，给出错误提示
+          console.error("地图数据加载失败：", error);
+          myChart.setOption({
+            title: {
+              text: "地图数据加载失败，请检查 china.geojson.json 和 user.json",
+              left: "center",
+              textStyle: {
+                color: "#c23531",
+                fontSize: 14,
+              },
+            },
+          });
+        } finally {
+          // 隐藏加载动画
+          myChart.hideLoading();
+        }
+      })();
+    </script>
+  </body>
+</html>
