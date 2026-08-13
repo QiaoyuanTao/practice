@@ -1,0 +1,55 @@
+@green: #008c8c;
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  color: @green;
+  li {
+    margin: 1em;
+    &:hover {
+      background: @green;
+      color: #fff;
+    }
+  }
+}
+
+.round(@r:5px) {
+  border-radius: @r;
+}
+
+.a {
+  .round(10px);
+}
+.b {
+  .round(20px);
+}
+.c {
+  .round();
+}
+
+.content-center() {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  .content-center;
+}
+//这是一个注释 只存在于less源代码
+
+/* 这是普通的css注释 会被保留到编译结果中*/
+
+.pos-center() {
+  position: absolute;
+  top: 50vh;
+  left: 50vw;
+  transform: translate(-50%, -50%);
+}
+
+.test {
+  box-shadow: 5px 5px 10px 5px rgb(66, 195, 224);
+  width: 100px;
+  height: 200px;
+  background-color: @green;
+  .pos-center();
+}

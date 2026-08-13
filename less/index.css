@@ -1,0 +1,37 @@
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  color: #008c8c;
+}
+.list li {
+  margin: 1em;
+}
+.list li:hover {
+  background: #008c8c;
+  color: #fff;
+}
+.a {
+  border-radius: 10px;
+}
+.b {
+  border-radius: 20px;
+}
+.c {
+  border-radius: 5px;
+}
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+/* 这是普通的css注释 会被保留到编译结果中*/
+.test {
+  box-shadow: 5px 5px 10px 5px #42c3e0;
+  width: 100px;
+  height: 200px;
+  background-color: #008c8c;
+  position: absolute;
+  top: 50vh;
+  left: 50vw;
+  transform: translate(-50%, -50%);
+}
